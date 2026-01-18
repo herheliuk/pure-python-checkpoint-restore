@@ -9,7 +9,7 @@ def add_tag(line_tags, tag):
 
 def mark(node, label):
     for line in range(node.lineno + 1, node.end_lineno + 1):
-        yield line, f"{label}:{node.lineno}"
+        yield line, { node.lineno: label }
 
 def walk(nodes):
     for node in nodes:
@@ -47,8 +47,8 @@ def visit(node):
                 prev_lineno = orelse[0].lineno - 1
                 for line in range(start_lineno, end_lineno + 1):
                     yield line, f"else:{prev_lineno}"
-                for n in orelse:
-                    yield from visit(n)
+                for node in orelse:
+                    yield from visit(node)
                 break
 
     elif isinstance(node, ast.For):
@@ -97,9 +97,8 @@ def parse_python_file(path = None, source = None):
     for lineno, tag in walk(tree.body):
         line_tags.setdefault(lineno, []).append(tag)
 
-    for lineno in sorted(line_tags):
-        yield lineno, line_tags[lineno]
+    return line_tags
 
 if __name__ == "__main__":
-    for lineno, tags in parse_python_file(FILE_TO_PARSE):
+    for lineno, tags in parse_python_file(FILE_TO_PARSE).items():
         print(f"Line {lineno}: {tags}")
