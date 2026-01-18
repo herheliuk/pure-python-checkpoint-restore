@@ -7,14 +7,12 @@ import functools
 import itertools
 import statistics
 from dataclasses import dataclass, field
-from enum import Enum
+# from enum import Enum # BUG
 from pathlib import Path
 from typing import Iterable, Generator
 
 # ---------- enums ----------
-class Mode(Enum):
-    WORDS = "words"
-    LINES = "lines"
+from modes import Mode
 
 # ---------- decorator ----------
 def once(fn):

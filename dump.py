@@ -12,6 +12,8 @@ from dill import (
 
 from types import FrameType
 
+from function_stack_parser import parse_python_file
+
 def get_stack(frame: FrameType) -> list[FrameType]:
     stack = []
     stack_append = stack.append
@@ -22,6 +24,8 @@ def get_stack(frame: FrameType) -> list[FrameType]:
 
     stack.reverse()
     return stack
+
+function_stacks = {}
 
 def main(debug_script_path: Path, dump_line: int):
     paths_to_trace = find_python_imports(debug_script_path)
@@ -38,7 +42,7 @@ def main(debug_script_path: Path, dump_line: int):
 
             lineno = frame.f_lineno
 
-            print(f"{f' {event} {lineno} ':-^50}")
+            print(f"{f' {event} {lineno} {function_stacks[lineno] if lineno in function_stacks else ''} ':-^50}")
 
             if event == 'line':
                 
@@ -61,6 +65,9 @@ def main(debug_script_path: Path, dump_line: int):
                 return trace_function
         
         source_code = debug_script_path.read_text()
+        
+        for lineno, tags in parse_python_file(source=source_code):
+            function_stacks[lineno] = tags
         
         if dump_line not in range(len(source_code.splitlines())):
             raise Exception(f'dump_line is out of the range')

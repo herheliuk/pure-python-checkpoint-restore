@@ -32,6 +32,7 @@ def main(debug_script_path: Path):
             print(f"{f' {event} {frame.f_lineno} ':-^50}")
             
             if event == 'line':
+                print(f"{f' jump {snapshot[0]['lineno']} ':-^50}")
                 frame.f_lineno = snapshot[0]['lineno']
                     
                 for key, value in snapshot[0]['locals'].items():
