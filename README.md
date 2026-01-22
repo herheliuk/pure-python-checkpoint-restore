@@ -16,8 +16,8 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 ---
 
 ### Next steps:
-- rebuild the function stack: if, try, with, for, etc. (find them with ast, same principle as function call stack)
-- dump and restore generators (i guess they are just undestructed frames, same thing as restoring functions)
+- rebuild the function stack: if, try, with, for, etc. (turn on opcodes in settrace, replace the values on runtime 😎?)
+- dump and restore generators (i guess they are just undestructed frames, probably the same as restoring functions)
 - restore file descriptors (probably just re-open files...)
 - figure out dumping mid-transaction (roll a few lines back?)
 - optionally rerun some lines that user wants?

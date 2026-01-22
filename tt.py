@@ -13,7 +13,7 @@ else:
     pass
 
 def ss():
-    for i in range(1, 6):
+    for i in range(1, 6): # 1..5
         yield i
 
 for i in ss():
