@@ -16,12 +16,12 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 ---
 
 ### Next steps:
-- rebuild the function stack: if, try, with, for, etc. (turn on opcodes in settrace, replace the values on runtime 😎?)
-- dump and restore generators (i guess they are just undestructed frames, probably the same as restoring functions)
-- restore file descriptors (probably just re-open files...)
-- figure out dumping mid-transaction (roll a few lines back?)
+- rebuild the function stack: if, try, with, for, etc.
+- dump and restore generators
+- restore file descriptors
+- figure out dumping mid-transaction
 - optionally rerun some lines that user wants?
-- async/await 🌚 (I didn't go there yet)
-- threads 🌚 (I didn't go there yet)
+- async/await 🌚
+- threads 🌚
 
 thease are not yet implemented/tested ^
