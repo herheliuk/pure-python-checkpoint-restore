@@ -25,3 +25,7 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 - threads 🌚
 
 thease are not yet implemented/tested ^
+
+### Possible way to move forward?
+
+<img src="images/idea.png" alt="Use ast to modify the code blocks in a way that rebuilds the stack, then inject the old scope"/>
