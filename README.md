@@ -16,7 +16,7 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 ---
 
 ### Next steps:
-- rebuild the function stack: if, try, with, for, etc.
+- rebuild the function stack: try, with, for, etc.
 - dump and restore generators
 - restore file descriptors
 - figure out dumping mid-transaction
@@ -28,4 +28,4 @@ thease are not yet implemented/tested ^
 
 ### Possible way to move forward?
 
-<img src="images/idea.png" alt="Use ast to modify the code blocks in a way that rebuilds the stack, then inject the old scope"/>
+<img src="images/idea.png" alt="Use ast to find and modify the code blocks in a way that rebuilds the stack, then inject the old scope on restore"/>
