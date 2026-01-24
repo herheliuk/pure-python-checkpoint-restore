@@ -16,7 +16,7 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 ---
 
 ### Next steps:
-- rebuild the function stack: try, with, for, etc.
+- rebuild the function stack: ~~if~~, ~~try~~, for, with, etc.
 - dump and restore generators
 - restore file descriptors
 - figure out dumping mid-transaction
