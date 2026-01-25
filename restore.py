@@ -6,12 +6,36 @@ from utils.context_managers import use_dir, use_trace
 from sys import argv, exit
 from pathlib import Path
 
+import ast
+
+class SliceForLoops(ast.NodeTransformer):
+    def __init__(self, hh):
+        self.hh = hh
+
+    def visit_For(self, node):
+        self.generic_visit(node)
+
+        if node.lineno not in self.hh:
+            return node
+
+        node.iter = ast.Subscript(
+            value=node.iter,
+            slice=ast.Slice(
+                lower=ast.Constant(self.hh[node.lineno]),
+                upper=None,
+                step=None
+            ),
+            ctx=ast.Load()
+        )
+
+        return node
+
 from dill import (
     load as dill_load
 )
 
 with open('snapshot', 'rb') as file:
-    snapshot = dill_load(file)
+    snapshot, hh = dill_load(file)
 
 def main(debug_script_path: Path):
     paths_to_trace = find_python_imports(debug_script_path)
@@ -45,8 +69,15 @@ def main(debug_script_path: Path):
         
         source_code = debug_script_path.read_text()
         
+        print(hh) # lineno: starts {19: 3, 16: 3}
+        
+        tree = ast.parse(source_code)
+
+        tree = SliceForLoops(hh).visit(tree)
+        ast.fix_missing_locations(tree)
+        
         compiled = compile(
-            source_code,
+            source=tree,
             filename=debug_script_path,
             mode='exec',
             dont_inherit=True
