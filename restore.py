@@ -35,7 +35,7 @@ from dill import (
 )
 
 with open('snapshot', 'rb') as file:
-    snapshot, hh = dill_load(file)
+    snapshot, hh, block_map = dill_load(file)
 
 def main(debug_script_path: Path):
     paths_to_trace = find_python_imports(debug_script_path)
@@ -56,8 +56,11 @@ def main(debug_script_path: Path):
             print(f"{f' {event} {frame.f_lineno} ':-^50}")
             
             if event == 'line':
-                print(f"{f' jump {snapshot[0]['lineno']} ':-^50}")
-                frame.f_lineno = snapshot[0]['lineno']
+                jump_to = snapshot[0]['lineno']
+                
+                print(f"{f' jump {jump_to} ':-^50}")
+                
+                frame.f_lineno = jump_to
                     
                 for key, value in snapshot[0]['locals'].items():
                     frame.f_locals[key] = value
@@ -69,7 +72,10 @@ def main(debug_script_path: Path):
         
         source_code = debug_script_path.read_text()
         
-        print(hh) # lineno: starts {19: 3, 16: 3}
+        for key, val in snapshot:
+            print(key, len(val))
+        
+        print(hh, block_map)
         
         tree = ast.parse(source_code)
 
