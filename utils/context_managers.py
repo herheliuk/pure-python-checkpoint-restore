@@ -18,7 +18,7 @@ def use_dir(target_dir: Path):
         if target_dir in path:
             path.remove(target_dir)
             chdir(original_dir)
-    
+
 @contextmanager
 def use_trace(trace_function):
     old_trace = gettrace()
