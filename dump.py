@@ -26,9 +26,10 @@ def get_stack(frame: FrameType) -> Iterator[FrameType]:
     
     yield from reversed(stack)
 
-function_stacks = {}
+hh = {}
 
 def main(debug_script_path: Path, dump_line: int):
+    global lines, mapping
     paths_to_trace = find_python_imports(debug_script_path)
     
     str_paths_to_trace = {
@@ -38,16 +39,23 @@ def main(debug_script_path: Path, dump_line: int):
     
     if True:
         def trace_function(frame, event, arg):
+            global hh
             str_code_filepath = frame.f_code.co_filename
             if str_code_filepath not in str_paths_to_trace: return
 
             lineno = frame.f_lineno
 
-            print(f"{f' {event} {lineno} {function_stacks[lineno] if lineno in function_stacks else ''} ':-^50}")
+            print(f"{f'  {event} {lineno} ':-^50}")
 
             if event == 'line':
                 
-                if lineno == dump_line:
+                if lineno in lines:
+                    if not lineno in hh.keys():
+                        hh[lineno] = 1
+                    else:
+                        hh[lineno] += 1
+                
+                if lineno == dump_line and hh[lineno] == 3:
                     
                     snapshot = []
                     
@@ -58,7 +66,7 @@ def main(debug_script_path: Path, dump_line: int):
                         })
                     
                     with open('snapshot', 'wb') as file:
-                        dill_dump(snapshot[2:], file)
+                        dill_dump((snapshot[2:], hh), file)
                     
                     exit()
 
@@ -67,10 +75,10 @@ def main(debug_script_path: Path, dump_line: int):
         
         source_code = debug_script_path.read_text()
         
-        function_stacks = parse_python_file(source=source_code)
+        lines, mapping = parse_python_file(source=source_code)
         
-        if dump_line not in range(len(source_code.splitlines())):
-            raise Exception(f'dump_line is out of the range')
+        if dump_line not in range(len(source_code.splitlines()) + 1):
+            print(f'dump_line is out of the range')
         
         compiled = compile(
             source_code,
@@ -101,7 +109,7 @@ if True:
     try:
         dump_line = int(argv[2])
     except:
-        raise Exception('dump_line should be an int')
+        dump_line = 9999 * 9999
     
     main(debug_script_path, dump_line)
     
