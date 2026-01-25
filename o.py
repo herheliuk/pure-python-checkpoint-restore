@@ -9,7 +9,7 @@ pops = dict(zip(args[::2], args[1::2]))
 
 def tracer(frame, event, arg):
     line_no = frame.f_lineno
-    print(event, line_no)
+    #print(event, line_no)
     match event:
         case "line":
             if line_no in pops.keys():
@@ -23,13 +23,10 @@ def tracer(frame, event, arg):
 settrace(tracer)
 
 def main():
-    try:
-        print('try')
-        raise Exception('123')
-    except Exception as e:
-        print(f'>> EXCEPT {e}')
-    finally:
-        print('finally')
+    with open('tt.py', 'r') as file:
+        lines = file.readlines()
+        for line in lines[14:]:
+            print(line, end='')
     ...
 
 main()
