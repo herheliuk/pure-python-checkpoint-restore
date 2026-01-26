@@ -1,21 +1,36 @@
 
-Usage: python3 dump.py `<file>` `<line number>`
-
-Usage: python3 restore.py `<file>`
-
-example:
-```
-source env.sh
-
-python3 dump.py file.py 43
-python3 restore.py file.py
-```
-
 https://youtu.be/B2ElZK0u85Y&t=60s
 
 ---
 
-### Next steps:
+### Main idea:
+
+``` python
+import sys
+
+frame = sys._getframe()
+```
+
+``` python
+from types import FrameType
+from typing import Iterator
+
+def get_frame_stack(frame: FrameType) -> Iterator[FrameType]:
+    """Yield frames from the root frame to the given frame."""
+    stack: list[FrameType] = []
+    stack_append = stack.append
+    
+    while frame:
+        stack_append(frame)
+        frame = frame.f_back
+    
+    yield from reversed(stack)
+```
+
+extract all useful data, save it and rebuild the state in a new program.
+
+### Work in progress
+
 - rebuild the block stack: ~~if~~, ~~try~~, for, with, etc.
 - dump and restore generators
 - restore file descriptors
@@ -26,6 +41,34 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 
 thease are not yet implemented/tested ^
 
-### Possible way to move forward?
+<img src="images/problems to solve.png" alt="You cannot slice: generators, zip objects, map/filter, other iterators"/>
 
-<img src="images/idea.png" alt="Use ast to find and modify the code blocks in a way that rebuilds the stack, then inject the old scope on restore"/>
+<img src="images/work in progress.png" alt="Use ast to find and modify the code blocks in a way that rebuilds the stack, then inject the old scope on restore"/>
+
+<img src="images/wip.png" alt="trace func in progress"/>
+
+### Call stack
+
+<img src="images/call stack.png" alt="call stack: list[int, dict]"/>
+
+### Restore process
+
+<img src="images/restore process.png" alt="for line, f_locals in call stack: frame.f_lineno = line; for key, value in f_locals: locals()[key] = value"/>
+
+---
+
+CURRENTLY BROKEN ⚠️, try `4afa151` or `6a61853`
+
+---
+
+Usage: python3 dump.py `<file>` `<line number>` `<?iteration>`
+
+Usage: python3 restore.py `<file>`
+
+example:
+```
+source env.sh
+
+python3 dump.py test_files/file.py 43
+python3 restore.py test_files/file.py
+```

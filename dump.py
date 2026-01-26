@@ -3,33 +3,21 @@
 from utils.ast_functions import find_python_imports
 from utils.context_managers import use_dir, use_trace
 
+from utils.block_stack_parser import parse_python_file
+from utils.stack import get_frame_stack
+
 from sys import argv, exit
 from pathlib import Path
 
 from dill import (
-    dump as dill_dump
+    dump as dill_dump,
+    dumps as dill_dumps
 )
 
-from types import FrameType
-from typing import Iterator
-
-from function_stack_parser import parse_python_file
-
-def get_stack(frame: FrameType) -> Iterator[FrameType]:
-    """Yield frames from the root frame to the given frame."""
-    stack: list[FrameType] = []
-    stack_append = stack.append
-    
-    while frame:
-        stack_append(frame)
-        frame = frame.f_back
-    
-    yield from reversed(stack)
-
-hh = {}
+for_counters: dict[int, int] = {}
 
 def main(debug_script_path: Path, dump_line: int):
-    global lines, mapping
+    global for_lines, block_map
     paths_to_trace = find_python_imports(debug_script_path)
     
     str_paths_to_trace = {
@@ -39,43 +27,54 @@ def main(debug_script_path: Path, dump_line: int):
     
     if True:
         def trace_function(frame, event, arg):
-            global hh
+            global for_counters
             str_code_filepath = frame.f_code.co_filename
             if str_code_filepath not in str_paths_to_trace: return
 
-            lineno = frame.f_lineno
+            line_number = frame.f_lineno
 
-            print(f"{f'  {event} {lineno} ':-^50}")
-
-            if event == 'line':
+            print(f"{f'  {event} {line_number} ':-^50}")
+            
+            match event:
+                case 'line':
+                    if line_number in for_lines:
+                        if not line_number in for_counters:
+                            for_counters[line_number] = 1
+                        else:
+                            for_counters[line_number] += 1
+                    
+                    if line_number == dump_line:
+                        
+                        snapshot = []
+                        
+                        for frame in get_frame_stack(frame):
+                            snapshot.append({
+                                "lineno": line_number,
+                                "locals": dict(frame.f_locals)
+                            })
+                        
+                        with open('snapshot', 'wb') as file:
+                            dill_dump((snapshot[2:], for_counters, block_map), file)
+                        
+                        exit()
                 
-                if lineno in lines:
-                    if not lineno in hh.keys():
-                        hh[lineno] = 1
-                    else:
-                        hh[lineno] += 1
+                case 'call':
+                    return trace_function
                 
-                if lineno == dump_line and hh[lineno] == 3:
+                case 'exception':
+                    exc_type, exc_value, exc_traceback = arg
+                    to_raise: bytes = dill_dumps(exc_value)
                     
-                    snapshot = []
-                    
-                    for frame in get_stack(frame):
-                        snapshot.append({
-                            "lineno": lineno,
-                            "locals": dict(frame.f_locals)
-                        })
-                    
-                    with open('snapshot', 'wb') as file:
-                        dill_dump((snapshot[2:], hh), file)
-                    
-                    exit()
-
-            elif event == 'call':
-                return trace_function
+                    print(f'{exc_type.__name__}: {exc_value}')
+                    import json
+                    print(json.dumps(block_map.get(line_number), indent=4))
         
         source_code = debug_script_path.read_text()
         
-        lines, mapping = parse_python_file(source=source_code)
+        for_lines, block_map = parse_python_file(source=source_code)
+        
+        import json
+        print(json.dumps(block_map, indent=4))
         
         if dump_line not in range(len(source_code.splitlines()) + 1):
             print(f'dump_line is out of the range')
