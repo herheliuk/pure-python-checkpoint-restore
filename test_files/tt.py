@@ -8,8 +8,7 @@ def ss():
         def h2pfq():
             with open('s', 'w'):
                 for i in range(1, 6): # 1..5
-                    hpfq()
-                    yield i
+                    yield from hpfq()
         yield from h2pfq()
 
 for i in ss():

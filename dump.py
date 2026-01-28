@@ -16,8 +16,9 @@ from dill import (
 
 for_counters: dict[int, int] = {}
 
-ast_rewrites = {}
+for_rewrites = {}
 block_locals = {}
+raise_rewrites = {}
 
 def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
     global triggers
@@ -30,7 +31,7 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
     
     if True:
         def trace_function(frame, event, arg):
-            global ast_rewrites, block_locals
+            global for_rewrites, raise_rewrites, block_locals
             str_code_filepath = frame.f_code.co_filename
             if str_code_filepath not in str_paths_to_trace: return
 
@@ -41,15 +42,15 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
             match event:
                 case 'line':
                     if code_block := triggers.get(line_number):
-                        print(f'TRIGGER {line_number} {code_block}')
                         frame_id = id(frame)
-                        print(frame_id)
                         match code_block:
                             case 'for':
-                                pass#try:
-                                #    ast_rewrites[frame_id][line_number] += 1
-                                #except:
-                                #    ast_rewrites[frame_id][line_number] = 1
+                                try:
+                                    for_rewrites[frame_id][line_number] += 1
+                                except:
+                                    for_rewrites[frame_id] = {
+                                        line_number: 1
+                                    }
                             case _:
                                 pass
                         try:
@@ -64,7 +65,7 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
                     if (
                         line_number == dump_line
                     ):
-                        print(f'--- DUMPING at line {line_number} ---')
+                        print(f"{f'  DUMPING at line {line_number} ':-^50}")
                         
                         """for frame in list(get_frame_stack(frame))[2:]:
                             print(frame.f_lineno)
@@ -83,7 +84,7 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
                             }):
                                 call_stack.append(call_entry)
                             
-                        print(call_stack)
+                        print(f'{call_stack=}', '\n\n', f'{for_rewrites=}', '\n\n', f'{block_locals=}', '\n\n', f'{raise_rewrites=}')
                         
                         exit()
                         snapshot = []
@@ -100,17 +101,22 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
                         exit()
                 
                 case 'call':
-                    """f_back = frame.f_back
-                    if f_back.f_lineno in triggers:
-                        block_locals[id(f_back)].pop()"""
-                    
+                    # if id(frame.f_locals[func_name]) is different,
+                    # for_rewrites[id(frame)] = {}
                     return trace_function
                 
                 case 'exception':
                     exc_type, exc_value, exc_traceback = arg
                     to_raise: bytes = dill_dumps(exc_value)
                     
-                    print(f'XXX [CAUGHT]: {exc_type.__name__}: {exc_value}')
+                    frame_id = id(frame)
+                    
+                    try:
+                        raise_rewrites[frame_id][line_number] = to_raise
+                    except:
+                        raise_rewrites[frame_id] = {
+                            line_number: to_raise
+                        }
         
         source_code = debug_script_path.read_text()
         
@@ -159,5 +165,8 @@ if True:
         iteration = 1
         
     main(debug_script_path, dump_line, iteration)
+    
+    
+    print(f'{for_rewrites=}', '\n\n', f'{block_locals=}', '\n\n', f'{raise_rewrites=}')
     
     raise Exception("dump_line was never hit.")
