@@ -11,3 +11,8 @@ def get_frame_stack(frame: FrameType) -> Iterator[FrameType]:
         frame = frame.f_back
     
     yield from reversed(stack)
+
+def walk_stack_backwards(frame: FrameType) -> Iterator[FrameType]:
+    while frame:
+        yield frame
+        frame = frame.f_back
