@@ -9,19 +9,19 @@ from pathlib import Path
 import ast
 
 class SliceForLoops(ast.NodeTransformer):
-    def __init__(self, hh):
-        self.hh = hh
+    def __init__(self, for_rewrites):
+        self.for_rewrites = for_rewrites
 
     def visit_For(self, node):
         self.generic_visit(node)
 
-        if node.lineno not in self.hh:
+        if node.lineno not in self.for_rewrites:
             return node
 
         node.iter = ast.Subscript(
             value=node.iter,
             slice=ast.Slice(
-                lower=ast.Constant(self.hh[node.lineno]),
+                lower=ast.Constant(self.for_rewrites[node.lineno]),
                 upper=None,
                 step=None
             ),
@@ -35,7 +35,7 @@ from dill import (
 )
 
 with open('snapshot', 'rb') as file:
-    snapshot, hh, block_map = dill_load(file)
+    call_stack, for_rewrites, block_stack, raise_rewrites = dill_load(file)
 
 def main(debug_script_path: Path):
     paths_to_trace = find_python_imports(debug_script_path)
@@ -50,36 +50,21 @@ def main(debug_script_path: Path):
             str_code_filepath = frame.f_code.co_filename
             if str_code_filepath not in str_paths_to_trace: return
             
-            if not snapshot:
-                return
-
-            print(f"{f' {event} {frame.f_lineno} ':-^50}")
-            
-            if event == 'line':
-                jump_to = snapshot[0]['lineno']
-                
-                print(f"{f' jump {jump_to} ':-^50}")
-                
-                frame.f_lineno = jump_to
-                    
-                for key, value in snapshot[0]['locals'].items():
-                    frame.f_locals[key] = value
-
-                del snapshot[0]
-
-            elif event == 'call':
-                return trace_function
+            if call_stack:
+                match event:
+                    case 'line':
+                        print(f'FROM {frame.f_lineno}')
+                        frame.f_lineno, f_locals = call_stack.pop()
+                        for key, value in f_locals.items():
+                            frame.f_locals[key] = value
+                    case 'call':
+                        return trace_function
         
         source_code = debug_script_path.read_text()
         
-        for key, val in snapshot:
-            print(key, len(val))
-        
-        print(hh, block_map)
-        
         tree = ast.parse(source_code)
 
-        tree = SliceForLoops(hh).visit(tree)
+        tree = SliceForLoops(for_rewrites).visit(tree)
         ast.fix_missing_locations(tree)
         
         compiled = compile(
