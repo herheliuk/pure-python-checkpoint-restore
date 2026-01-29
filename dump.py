@@ -45,10 +45,11 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
                         frame_id = id(frame)
                         match code_block:
                             case 'for':
+                                func_id = id(frame.f_code)
                                 try:
-                                    for_rewrites[frame_id][line_number] += 1
+                                    for_rewrites[func_id][line_number] += 1
                                 except:
-                                    for_rewrites[frame_id] = {
+                                    for_rewrites[func_id] = {
                                         line_number: 1
                                     }
                             case _:
@@ -101,8 +102,6 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
                         exit()
                 
                 case 'call':
-                    # if id(frame.f_locals[func_name]) is different,
-                    # for_rewrites[id(frame)] = {}
                     return trace_function
                 
                 case 'exception':

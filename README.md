@@ -31,6 +31,8 @@ extract all useful data, save it and rebuild the state in a new program.
 
 ### Work in progress
 
+Curently working on: saving and applying ast rewrites, finding out current iteration for dumps
+
 - rebuild the block stack: ~~if~~, ~~try~~, for, with, etc.
 - dump and restore generators
 - restore file descriptors
