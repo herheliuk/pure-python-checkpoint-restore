@@ -45,7 +45,7 @@ def main(debug_script_path: Path, dump_line: int, iteration: int = 1):
                         frame_id = id(frame)
                         match code_block:
                             case 'for':
-                                func_id = id(frame.f_code)
+                                func_id = id(frame) # NOT ENOUGH!? (maybe for init opcode instead?)
                                 try:
                                     for_rewrites[func_id][line_number] += 1
                                 except:
