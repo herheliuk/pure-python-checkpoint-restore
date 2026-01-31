@@ -54,8 +54,6 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
                 instruction = frame.f_code.co_code[frame.f_lasti]
                 opcode = dis_opname[instruction]
                 
-                frame_id = id(frame)
-                
                 match opcode:
                     case 'FOR_ITER':
                         print(opcode)
@@ -63,27 +61,32 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
 
                     case 'GET_ITER':
                         print(opcode)
-                        stack = block_stack.setdefault(frame_id, [])
-                        stack.append((line_number, dict(frame.f_locals)))
-
                         for_rewrites[line_number] = -1
                     
                     case 'POP_ITER':
                         print(opcode)
                         frame.f_trace_opcodes = False
-                    
+
             case 'line':
                 line_occurances[line_number] = line_occurances.get(line_number, 0) + 1
                 
-                if code_block := triggers.get(line_number):
+                if trigger_data := triggers.get(line_number):
+                    code_block, offset = trigger_data
+                    
+                    stack = block_stack.setdefault(id(frame), [])
+                    
+                    new_entry = (line_number, dict(frame.f_locals))
+
+                    if offset == len(stack):
+                        stack.append(new_entry)
+                    else:
+                        stack[offset] = new_entry
+                        
+                    del stack[offset + 1:]
+                    
                     match code_block:
                         case 'For':
                             frame.f_trace_opcodes = True
-                        case _:
-                            frame_id = id(frame)
-                            
-                            stack = block_stack.setdefault(frame_id, [])
-                            stack.append((line_number, dict(frame.f_locals)))
                 
                 if (
                     line_number == dump_line
@@ -145,14 +148,7 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
                 
                 print(f"{exc_type.__name__}" + (f": {exc_value}" if str(exc_value) else ""))
                 
-                frame_id = id(frame)
-                
-                try:
-                    raise_rewrites[frame_id][line_number] = to_raise
-                except:
-                    raise_rewrites[frame_id] = {
-                        line_number: to_raise
-                    }
+                raise_rewrites[line_number] = to_raise
     
     source_code = script_to_debug_path.read_text()
     

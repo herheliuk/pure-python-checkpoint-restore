@@ -37,4 +37,4 @@ with open('miss', 'rb') as file:
 
 assert _out == out and _log == log, "MISMATCH"
 
-print("GOOD")
+print("\033[32mHAROSHAYA RABOTA OLEG!")
