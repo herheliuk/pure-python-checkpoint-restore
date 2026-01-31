@@ -3,6 +3,7 @@ out = []
 
 for i in range(1, 6):
     log.append(("top1", i))
+    print(i)
 
 for i in range(1, 6):
     log.append(("top2", i))
@@ -31,7 +32,7 @@ for i in list(ss()):
 
 import dill
 
-with open('dump_test', 'rb') as file:
+with open('miss', 'rb') as file:
     _out, _log = dill.load(file)
 
 assert _out == out and _log == log, "MISMATCH"

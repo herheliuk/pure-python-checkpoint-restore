@@ -42,6 +42,7 @@ extract all useful data, save it and rebuild the state in a new program.
 Curently working on: identifying code block boundaries, saving and applying ast rewrites, finding out current iteration for dumps
 
 - rebuild the block stack (almost there, but we need to pop the trash from it)
+- don't use opcodes for for's (bug!)
 - current iteration
 - generators
 - classes (_enter_) 🌚
