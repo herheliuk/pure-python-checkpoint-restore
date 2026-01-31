@@ -23,16 +23,14 @@ settrace(tracer)
 
 def main():
     try:
-        with open('o.py', 'r'):
-            try:
-                with open('o.py', 'r'):
-                    for i in range(1,6):
-                        print('NO')
-                        raise ...
-            except Exception as e:
-                print(f'{e}')
-    except:
-        pass
+        print("OH, NOOOOO, MY SHAILA!!")
+        0/0
+    except Exception as error:
+        print("EXCEPTION:", error)
+    else:
+        print("NO EXCEPTIONS, ALL GOOD!")
+    finally:
+        print("FINALLY RAN")
     ...
 
 main()

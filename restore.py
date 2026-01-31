@@ -53,8 +53,9 @@ def main(debug_script_path: Path):
             if call_stack:
                 match event:
                     case 'line':
-                        print(f'FROM {frame.f_lineno}')
+                        print(f'{frame.f_lineno}..', end='')
                         frame.f_lineno, f_locals = call_stack.pop()
+                        print(f'{frame.f_lineno}')
                         for key, value in f_locals.items():
                             frame.f_locals[key] = value
                     case 'call':

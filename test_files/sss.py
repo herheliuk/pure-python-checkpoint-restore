@@ -21,3 +21,4 @@ def ss():
     for i in range(1, 6):
         yield from h2pfq()
 
+main()
