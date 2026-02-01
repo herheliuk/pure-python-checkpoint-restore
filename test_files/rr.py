@@ -1,6 +1,6 @@
 try:
     print("OH, NOOOOO, MY SHAILA!!")
-    0/0
+    open("g", 'r')
 except Exception as error:
     print("EXCEPTION:", error)
 else:

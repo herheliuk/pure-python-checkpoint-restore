@@ -30,17 +30,13 @@ def get_the_stack(frame: FrameType) -> Iterator[FrameType]:
 
 extract all useful data, save it and rebuild the state in a new program.
 
-### Work in progress
+### planned Next steps:
 
-<img src="images/work in progress.png" alt="Use ast to find and modify the code blocks in a way that rebuilds the stack, then inject the old scope on restore"/>
-
-- saving and applying 'raise' ast rewrites
-- generators
 - file descriptors
 - async/await 🌚
 - threads 🌚
 
-Cannot slice ('for' block):
+'for' block, Cannot slice:
 
 - generators
 - generator expressions
@@ -48,15 +44,16 @@ Cannot slice ('for' block):
 - map/filter
 - custom iterators
 
-yep. thease are not yet implemented/tested... ^
+thease are not yet implemented/tested... ^
 
-#### BUGS:
+#### known BUGS:
 
 - classes, (_enter_ call) ; they are not on the call stack...
 - dumping for lines themselves ; opcodes run after the "line" event...
 - ?use frames for rewrites and other mappings ; we can have a few instances of the same function!
+- ?if for throws it will be on the stack twice
 
-### FUTURE OPTIMISATIONS:
+### planned OPTIMISATIONS:
 
 - use AST to determine which locals we need to dump
 - store only changes to locals (SQL table)
