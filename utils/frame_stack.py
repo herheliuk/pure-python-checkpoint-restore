@@ -1,8 +1,8 @@
 from types import FrameType
 from typing import Iterator
 
-def get_frame_stack(frame: FrameType) -> Iterator[FrameType]:
-    """Yield frames from the root frame to the given frame."""
+def walk_frames_to_current(frame: FrameType) -> Iterator[FrameType]:
+    """slow"""
     stack: list[FrameType] = []
     stack_append = stack.append
     
@@ -12,7 +12,8 @@ def get_frame_stack(frame: FrameType) -> Iterator[FrameType]:
     
     yield from reversed(stack)
 
-def walk_stack_backwards(frame: FrameType) -> Iterator[FrameType]:
+def walk_frames_to_root(frame: FrameType) -> Iterator[FrameType]:
+    """fast"""
     while frame:
         yield frame
         frame = frame.f_back

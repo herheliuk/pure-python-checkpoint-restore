@@ -4,10 +4,7 @@ from utils.ast_functions import find_python_imports
 from utils.context_managers import use_dir, use_trace
 
 from utils.code_blocks import parse_triggers
-from utils.stack import (
-    walk_stack_backwards,
-    get_frame_stack
-)
+from utils.frame_stack import walk_frames_to_root
 
 from sys import argv
 from os import _exit as exit
@@ -95,18 +92,23 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
 
                     call_stack = []
                     
-                    for frame in list(get_frame_stack(frame))[2:]:
-                        block_entries = None
-                        if (frame_id := id(frame)) in block_stack:
-                            block_entries = block_stack[frame_id]
-                            call_stack.extend(block_entries)
+                    for frame in walk_frames_to_root(frame):
                         
-                        call_entry = (frame.f_lineno, dict(frame.f_locals))
+                        new_entry = (frame.f_lineno, dict(frame.f_locals))
                         
-                        if not block_entries or block_entries[-1] != call_entry:
-                            call_stack.append(call_entry)
-                    
-                    call_stack.reverse()
+                        block_calls = block_stack.get(id(frame), [])
+                        block_calls.reverse()
+                        
+                        if (
+                            not block_calls
+                            or
+                            block_calls[-1] != new_entry
+                        ):
+                            call_stack.append(new_entry)
+                        
+                        call_stack.extend(block_calls)
+
+                    del call_stack[-2:]
                     
                     with open(script_dir / 'snapshot', 'wb') as file:
                         dill_dump((
