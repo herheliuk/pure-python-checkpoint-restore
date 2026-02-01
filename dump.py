@@ -74,15 +74,13 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
                     code_block, offset = trigger_data
                     
                     stack = block_stack.setdefault(id(frame), [])
-                    
                     new_entry = (line_number, dict(frame.f_locals))
-
-                    if offset == len(stack):
+                    
+                    if offset >= len(stack):
                         stack.append(new_entry)
                     else:
                         stack[offset] = new_entry
-                        
-                    del stack[offset + 1:]
+                        del stack[offset + 1:]
                     
                     match code_block:
                         case 'For':
@@ -94,17 +92,7 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
                     line_occurances.get(line_number) >= dump_occurance
                 ):
                     print(f"{f'  DUMPING at line {line_number} ':-^50}")
-                    
-                    """for frame in list(get_frame_stack(frame))[2:]:
-                        print(frame.f_lineno)
-                    
-                    exit()"""
-                    
-                    """real_call_stack = []
-                    
-                    for frame in list(get_frame_stack(frame))[2:]:
-                        real_call_stack.append(frame.f_lineno)"""
-                    
+
                     call_stack = []
                     
                     for frame in list(get_frame_stack(frame))[2:]:
@@ -118,12 +106,11 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
                         if not block_entries or block_entries[-1] != call_entry:
                             call_stack.append(call_entry)
                     
-                    # f'{real_call_stack=}', '\n\n', 
-                    print(f'{call_stack=}', '\n\n', f'{for_rewrites=}', '\n\n', f'{block_stack=}', '\n\n', f'{raise_rewrites=}')
-
+                    call_stack.reverse()
+                    
                     with open(script_dir / 'snapshot', 'wb') as file:
                         dill_dump((
-                            list(reversed(call_stack)),
+                            call_stack,
                             for_rewrites,
                             block_stack,
                             raise_rewrites
@@ -132,22 +119,18 @@ def main(script_to_debug_path: Path, dump_line: int, dump_occurance: int = 1):
                     exit(0)
             
             case 'call':
-                """last_call_line = line_number
-                try:
-                    block_body = triggers[line_number]['body']
-                    block_end = triggers[line_number]['end']
-                except KeyError:
-                    block_body = {}
-                    block_end = None
-                #print(block_body, block_end)"""
+                # Classes BUG solution needed. here?
                 return trace_function
             
             case 'exception':
+                stack = block_stack.setdefault(id(frame), [])
+                stack.append((line_number, dict(frame.f_locals)))
+                
                 exc_type, exc_value, exc_traceback = arg
-                to_raise: bytes = dill_dumps(exc_value)
                 
                 print(f"{exc_type.__name__}" + (f": {exc_value}" if str(exc_value) else ""))
                 
+                to_raise: bytes = dill_dumps(exc_value)
                 raise_rewrites[line_number] = to_raise
     
     source_code = script_to_debug_path.read_text()

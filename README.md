@@ -34,7 +34,6 @@ extract all useful data, save it and rebuild the state in a new program.
 
 <img src="images/work in progress.png" alt="Use ast to find and modify the code blocks in a way that rebuilds the stack, then inject the old scope on restore"/>
 
-- try...
 - saving and applying 'raise' ast rewrites
 - generators
 - file descriptors
