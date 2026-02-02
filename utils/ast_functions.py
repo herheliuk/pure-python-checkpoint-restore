@@ -3,7 +3,7 @@
 from ast import parse, walk, Import, ImportFrom
 from pathlib import Path
 
-def find_python_imports(script_path: Path) -> set[Path]:
+def find_imports(script_path: Path) -> set[Path]:
     script_dir = script_path.parent
     source_code = script_path.read_text()
     ast_tree = parse(source_code, filename=script_path.name)

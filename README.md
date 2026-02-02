@@ -3,16 +3,19 @@ https://youtu.be/B2ElZK0u85Y&t=60s
 
 ---
 
-Usage: python3 dump.py `<file>` `<line number>` `<occurance>`
+### Usage:
 
-Usage: python3 restore.py `<file>`
+python3 dump.py `<script_path>` `<dump_line>` `[dump_occurrence=1]` `[snapshot_path=snapshot]`
 
-example:
+python3 restore.py `[snapshot_path=snapshot]` `[script_path=from(snapshot)]`
+
+#### Example:
+
 ```
 source env.sh
 
-python3 dump.py test_files/miss.py 5 4
-python3 restore.py test_files/miss.py
+python dump.py test_files/miss.py 5 4
+python restore.py
 ```
 
 ---
@@ -30,13 +33,11 @@ def get_the_stack(frame: FrameType) -> Iterator[FrameType]:
 
 extract all useful data, save it and rebuild the state in a new program.
 
-### planned Next steps:
+---
 
-- file descriptors
-- async/await 🌚
-- threads 🌚
+### WIP:
 
-'for' block, Cannot slice:
+from 'for' block:
 
 - generators
 - generator expressions
@@ -44,16 +45,18 @@ extract all useful data, save it and rebuild the state in a new program.
 - map/filter
 - custom iterators
 
-thease are not yet implemented/tested... ^
+&
+
+- async/await 🌚
+- threads 🌚
 
 #### known BUGS:
 
+- file descriptors ; we're overwriting them with old locals...
 - classes, (_enter_ call) ; they are not on the call stack...
-- dumping for lines themselves ; opcodes run after the "line" event...
-- ?use frames for rewrites and other mappings ; we can have a few instances of the same function!
-- ?if for throws it will be on the stack twice
+- use frames for all rewrites ; we may have a few instances of the same function!
+- ? maybe tracing.py needs to return paths_to_trace; since returning self on calls
 
-### planned OPTIMISATIONS:
+#### OPTIMISATIONS:
 
-- use AST to determine which locals we need to dump
-- store only changes to locals (SQL table)
+- use AST to determine which locals we need to dump &? -> SQL

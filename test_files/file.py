@@ -65,4 +65,4 @@ def main():
 
 output = main()
 hash = md5(output.encode()).hexdigest()
-print(output, '\n\n', hash == "46dc8295fc40b6c176c8973ce4fcc6dc", hash)
+print(output, '\n\n', '\033[32m', hash == "46dc8295fc40b6c176c8973ce4fcc6dc", hash)
