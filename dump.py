@@ -16,6 +16,8 @@ line_occurrences: dict[int, int] = {}
 for_slices: dict[int, dict[int, int]] = {}
 raise_exceptions: dict[int, Exception] = {}
 
+generator_lines: set[int] = set()
+
 
 def trace_function(frame, event, arg):
     line_number = frame.f_lineno
@@ -45,24 +47,21 @@ def trace_function(frame, event, arg):
                 for_slice_slot[line_number] = for_slice_slot.get(line_number, -1) + 1
             
             if (
-                line_number >= _dump_line
+                line_number == _dump_line
                 and
                 occurrence >= _dump_occurrence
             ):
                 print(f"{f'  DUMPING at line {line_number} ':-^50}")
-                
-                if dump_shift := (
-                    line_number != _dump_line or occurrence != _dump_occurrence
-                ):
-                    print("\033[31m", 'WARN: DUMP SHIFT', "\033[0m")
 
                 call_stack = []
                 
                 for frame in walk_frames_to_root(frame):
                     
+                    _frame_id = id(frame)
+                    
                     new_entry = (frame.f_lineno, dict(frame.f_locals))
                     
-                    block_calls = block_stack.get(id(frame), [])
+                    block_calls = block_stack.get(_frame_id, [])
                     block_calls.reverse()
                     
                     if (
@@ -90,11 +89,14 @@ def trace_function(frame, event, arg):
                         _file
                     ), file)
                 
-                _exit(int(dump_shift))
+                _exit(0)
         
         case 'call':
             for_slices[id(frame)] = {}
-            # Classes BUG solution needed. here?
+            
+            if line_number in _generators:
+                generator_lines.add(line_number)
+            
             return trace_function
         
         case 'exception':
@@ -109,7 +111,7 @@ def trace_function(frame, event, arg):
 
 
 def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path) -> None:
-    global _triggers, _dump_line, _dump_occurrence, _snapshot, _file
+    global _triggers, _dump_line, _dump_occurrence, _snapshot, _file, _generators
     
     try:
         source_code = file.read_text()
@@ -119,11 +121,14 @@ def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path) -> No
     if not dump_line in range(len(source_code.splitlines()) + 1):
         raise ValueError('dump_line is out of range')
 
-    _triggers = parse_triggers(source_code)
+    _triggers, _generators = parse_triggers(source_code)
     
     _dump_line, _dump_occurrence, _snapshot, _file = dump_line, dump_occurrence, snapshot, file
     
     exec_under_trace(file, source_code, trace_function)
+    
+    print("\033[31m", 'NERVER DUMPED', "\033[0m")
+    exit(1)
 
 
 if __name__ == "__main__":

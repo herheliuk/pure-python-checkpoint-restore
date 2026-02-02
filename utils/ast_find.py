@@ -1,13 +1,17 @@
 import ast
 
-def parse_triggers(source: str) -> dict[int, tuple[str, int]]:
+def parse_triggers(source: str) -> tuple[dict[int, tuple[str, int]], set[int]]:
     tree = ast.parse(source)
     blocks = {}
+    generators = set()
+    function_stack = []
 
     def walk(node, depth):
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                function_stack.append(child.lineno)
                 walk(child, 0)
+                function_stack.pop()
                 continue
 
             match child:
@@ -31,8 +35,11 @@ def parse_triggers(source: str) -> dict[int, tuple[str, int]]:
                     blocks[child.lineno] = (type(child).__name__, depth)
                     walk(child, depth + 1)
 
+                case ast.Yield() | ast.YieldFrom():
+                    generators.add(function_stack[-1])
+
                 case _:
                     walk(child, depth)
 
     walk(tree, 0)
-    return blocks
+    return blocks, generators

@@ -52,8 +52,10 @@ from 'for' block:
 
 #### known BUGS:
 
-- file descriptors ; we're overwriting them with old locals...
-- classes, (_enter_ call) ; they are not on the call stack...
+- locals()['var'] = ... ; ast is blind to that ATM
+- miss.py:30 'for' forces call stack that should've been returned / never ran... ; for i in (hash_29 := list(ss())):
+- imp.py:94 class triggers like _enter_ shouldn't be ran. ; get rid of _enter_ on all classes. but... what about C objects??
+- file descriptors ; we're overwriting them with old locals / shouldn't have had ran as well... ; lsof ?
 - use frames for all rewrites ; we may have a few instances of the same function!
 - ? maybe tracing.py needs to return paths_to_trace; since returning self on calls
 

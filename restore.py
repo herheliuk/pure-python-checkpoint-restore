@@ -15,6 +15,7 @@ from utils.ast_patches import (
 
 def trace_function(frame, event, arg):
     if _call_stack:
+        print(f"{f'  {event} {frame.f_lineno} ':-^50}")
         match event:
             case 'line':
                 print(f'{frame.f_lineno}..', end='')
@@ -34,7 +35,10 @@ def main(snapshot: Path, file: Path):
     
     file = file or _file
     
-    source_code = file.read_text()
+    try:
+        source_code = file.read_text()
+    except UnicodeDecodeError:
+        raise RuntimeError('invalid file') from None
     
     tree = parse_tree(source_code)
     tree = apply_patches(tree, for_slices, raise_exceptions)
