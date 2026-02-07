@@ -37,9 +37,12 @@ extract all useful data, save it and rebuild the state in a new program.
 
 ### WIP:
 
+- exclude with
+- for i in (hash_29 := ...):
+- generators
+
 from 'for' block:
 
-- generators
 - generator expressions
 - zip objects
 - map/filter
@@ -53,7 +56,7 @@ from 'for' block:
 #### known BUGS:
 
 - locals()['var'] = ... ; ast is blind to that ATM
-- miss.py:30 'for' forces call stack that should've been returned / never ran... ; for i in (hash_29 := list(ss())):
+- miss.py:30 'for' forces call stack that should've been returned / never ran... ; for i in (hash_29 := ...):
 - imp.py:94 class triggers like _enter_ shouldn't be ran. ; get rid of _enter_ on all classes. but... what about C objects??
 - file descriptors ; we're overwriting them with old locals / shouldn't have had ran as well... ; lsof ?
 - use frames for all rewrites ; we may have a few instances of the same function!

@@ -22,15 +22,8 @@ def tracer(frame, event, arg):
 settrace(tracer)
 
 def main():
-    try:
-        print("OH, NOOOOO, MY SHAILA!!")
-        0/0
-    except Exception as error:
-        print("EXCEPTION:", error)
-    else:
-        print("NO EXCEPTIONS, ALL GOOD!")
-    finally:
-        print("FINALLY RAN")
+    if not __debug__:
+        print("NEVER")
     ...
 
 main()

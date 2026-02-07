@@ -6,7 +6,7 @@ from dill import (
     load as dill_load
 )
 
-from utils.tracing import exec_under_trace
+from utils.tracing import yield_overhead_then_trace
 from utils.ast_patches import (
     parse_tree,
     apply_patches
@@ -14,26 +14,32 @@ from utils.ast_patches import (
 
 
 def trace_function(frame, event, arg):
-    if _call_stack:
-        print(f"{f'  {event} {frame.f_lineno} ':-^50}")
+    if call_stack:
         match event:
-            case 'line':
-                print(f'{frame.f_lineno}..', end='')
-                frame.f_lineno, f_locals = _call_stack.pop()
-                print(f'{frame.f_lineno}')
-                for key, value in f_locals.items():
-                    frame.f_locals[key] = value
+            case 'line': 
+                next_line, required_locals = call_stack.pop()
+                
+                if __debug__:
+                    print(f'{frame.f_lineno}..{next_line}')
+                
+                frame.f_locals.update(required_locals)
+                if frame.f_lineno != next_line: # avoid RuntimeWarning
+                    frame.f_lineno = next_line
+            
             case 'call':
+                if __debug__:
+                    print(f'[{frame.f_lineno}]')
+                    
                 return trace_function
 
 
 def main(snapshot: Path, file: Path):
-    global _call_stack
+    global call_stack
     
-    with open(snapshot, 'rb') as _file:
-        _call_stack, for_slices, raise_exceptions, _file = dill_load(_file)
+    with open(snapshot, 'rb') as open_file:
+        call_stack, for_slices, exceptions, saved_file = dill_load(open_file)
     
-    file = file or _file
+    file = file or saved_file
     
     try:
         source_code = file.read_text()
@@ -41,9 +47,11 @@ def main(snapshot: Path, file: Path):
         raise RuntimeError('invalid file') from None
     
     tree = parse_tree(source_code)
-    tree = apply_patches(tree, for_slices, raise_exceptions)
+    tree = apply_patches(tree, for_slices, exceptions)
     
-    exec_under_trace(file, tree, trace_function)
+    tracer = yield_overhead_then_trace(file, tree, trace_function)
+    TRACING_OVERHEAD = next(tracer)
+    next(tracer)
 
 
 if __name__ == "__main__":

@@ -26,15 +26,30 @@ def ss():
                     yield from hpfq()
         yield from h2pfq()
 
-for i in list(ss()):
+for i in ss():
     out.append(i)
     log.append(("out", i))
 
-import dill
 
-with open('miss', 'rb') as file:
-    _out, _log = dill.load(file)
+if __name__ == "__main__":
+    import dill
+    from pathlib import Path
 
-assert _out == out and _log == log, "MISMATCH"
+    if __debug__:
+        with open(Path(__file__).parent / 'miss', 'rb') as file:
+            _out, _log = dill.load(file)
+            
+        bad_values = 0
 
-print("\033[32mHAROSHAYA RABOTA OLEG!")
+        for x, y in zip(_log, log):
+            if x != y:
+                bad_values += 1
+
+        assert not bad_values, print(f'{bad_values}/{len(_log) + len(log)}')
+        if _log == log and _out == out:
+            print("\033[32m" + "HAROSHAYA RABOTA OLEG!")
+    else:
+        with open(Path(__file__).parent / 'miss', 'wb') as file:
+            dill.dump((out, log), file)
+        
+        print('\033[32m' + 'Saved.')

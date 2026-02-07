@@ -7,7 +7,7 @@ from dill import dump as dill_dump
 
 from utils.ast_find import parse_triggers
 from utils.frame_stack import walk_frames_to_root
-from utils.tracing import exec_under_trace
+from utils.tracing import yield_overhead_then_trace
 
 
 block_stack: dict[int, dict[int, dict]] = {}
@@ -16,13 +16,14 @@ line_occurrences: dict[int, int] = {}
 for_slices: dict[int, dict[int, int]] = {}
 raise_exceptions: dict[int, Exception] = {}
 
-generator_lines: set[int] = set()
+generators: dict[int, int | dict] = {}
+gen_ids = set()
 
 
 def trace_function(frame, event, arg):
     line_number = frame.f_lineno
 
-    print(f"{f'  {event} {line_number} {line_occurrences.get(line_number, 0) + 1} ':-^50}")
+    #print(f"{f'  {event} {line_number} {line_occurrences.get(line_number, 0) + 1} ':-^50}")
     
     match event:
         case 'line':
@@ -33,14 +34,15 @@ def trace_function(frame, event, arg):
                 
                 frame_id = id(frame)
                 
-                stack = block_stack.setdefault(frame_id, [])
                 new_entry = (line_number, dict(frame.f_locals))
                 
-                if offset >= len(stack):
-                    stack.append(new_entry)
+                _block_stack = block_stack.setdefault(frame_id, [])
+                
+                if offset >= len(_block_stack):
+                    _block_stack.append(new_entry)
                 else:
-                    stack[offset] = new_entry
-                    del stack[offset + 1:]
+                    _block_stack[offset] = new_entry
+                    del _block_stack[offset + 1:]
                 
                 for_slice_slot = for_slices[frame_id]
                 
@@ -51,7 +53,8 @@ def trace_function(frame, event, arg):
                 and
                 occurrence >= _dump_occurrence
             ):
-                print(f"{f'  DUMPING at line {line_number} ':-^50}")
+                if __debug__:
+                    print(f"{f'  DUMPING at line {line_number} ':-^50}")
 
                 call_stack = []
                 
@@ -73,7 +76,7 @@ def trace_function(frame, event, arg):
                     
                     call_stack.extend(block_calls)
 
-                del call_stack[-3:]
+                del call_stack[-TRACING_OVERHEAD:]
                 
                 _for_slices: dict[int, int] = {
                     inner_key: inner_value
@@ -92,26 +95,37 @@ def trace_function(frame, event, arg):
                 _exit(0)
         
         case 'call':
-            for_slices[id(frame)] = {}
+            frame_id = id(frame)
+            
+            for_slices[frame_id] = {}
             
             if line_number in _generators:
-                generator_lines.add(line_number)
+                print(f'GEN CALL {line_number}')
+                gen_ids.add(frame_id)
+                generators[frame.f_back.f_lineno] = frame_id
             
             return trace_function
+        
+        case 'return':
+            if (frame_id := id(frame)) in gen_ids:
+                print(f'GEN RET {line_number}')
+                _block_stack = block_stack.setdefault(frame_id, [])
+                _block_stack.append((line_number, dict(frame.f_locals)))
         
         case 'exception':
             exc_type, exc_value, exc_traceback = arg
             
             raise_exceptions[line_number] = exc_value # BUG use if(frame) as well!
             
-            stack = block_stack.setdefault(id(frame), [])
-            stack.append((line_number, dict(frame.f_locals)))
+            _block_stack = block_stack.setdefault(id(frame), [])
+            _block_stack.append((line_number, dict(frame.f_locals)))
             
-            print(f"{exc_type.__name__}" + (f": {exc_value}" if str(exc_value) else ""))
+            if __debug__:
+                print(f"{exc_type.__name__}" + f": {exc_value}" if str(exc_value) else "")
 
 
 def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path) -> None:
-    global _triggers, _dump_line, _dump_occurrence, _snapshot, _file, _generators
+    global _triggers, _dump_line, _dump_occurrence, _snapshot, _file, _generators, TRACING_OVERHEAD
     
     try:
         source_code = file.read_text()
@@ -125,9 +139,11 @@ def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path) -> No
     
     _dump_line, _dump_occurrence, _snapshot, _file = dump_line, dump_occurrence, snapshot, file
     
-    exec_under_trace(file, source_code, trace_function)
+    tracer = yield_overhead_then_trace(file, source_code, trace_function)
+    TRACING_OVERHEAD = next(tracer)
+    next(tracer)
     
-    print("\033[31m", 'NERVER DUMPED', "\033[0m")
+    print("\033[31m" + 'NERVER DUMPED' + "\033[0m")
     exit(1)
 
 

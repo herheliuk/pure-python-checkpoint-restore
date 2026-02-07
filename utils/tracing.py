@@ -2,13 +2,12 @@
 
 from ast import AST
 from pathlib import Path
+from sys import _getframe
 
 from utils.ast_functions import find_imports
 from utils.context_managers import use_dir, use_trace
 
-def exec_under_trace(file: Path, source: str | AST, trace_function: function):
-    """faking"""
-    
+def yield_overhead_then_trace(file: Path, source: str | AST, trace_function: function):
     paths_to_trace = { str(path) for path in find_imports(file) }
     
     compiled = compile(
@@ -29,6 +28,13 @@ def exec_under_trace(file: Path, source: str | AST, trace_function: function):
     
     with use_dir(file.parent), use_trace(inner_trace_function):
         try:
+            frame, overhead = _getframe(), 0
+            while frame:
+                overhead += 1
+                frame = frame.f_back
+            
+            yield overhead
+            
             exec(
                 compiled,
                 globals=exec_globals,
