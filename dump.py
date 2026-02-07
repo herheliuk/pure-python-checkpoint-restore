@@ -7,7 +7,11 @@ from dill import dump as dill_dump
 
 from utils.ast_find import parse_triggers
 from utils.frame_stack import walk_frames_to_root
-from utils.tracing import yield_overhead_then_trace
+from utils.tracing import use_path, yield_overhead_then_trace
+from utils.ast_patches import (
+    code_to_tree,
+    apply_pre_dump_patches
+)
 
 
 block_stack: dict[int, dict[int, dict]] = {}
@@ -19,6 +23,9 @@ raise_exceptions: dict[int, Exception] = {}
 generators: dict[int, int | dict] = {}
 gen_ids = set()
 
+block_code_var_promisses: dict[int, int] = {}
+
+code_block_parts: set[str] = set()
 
 def trace_function(frame, event, arg):
     line_number = frame.f_lineno
@@ -29,11 +36,27 @@ def trace_function(frame, event, arg):
         case 'line':
             line_occurrences[line_number] = occurrence = line_occurrences.get(line_number, 0) + 1
             
+            frame_id = id(frame)
+            
+            if promise_data := block_code_var_promisses.pop(frame_id, None):
+                entry_line, offset = promise_data
+                name_start = f'line_{entry_line}'
+
+                if __debug__:
+                    print(name_start)
+                
+                filrered_locals = {}
+                
+                for name, value in dict(frame.f_locals).items():
+                    if name.startswith(name_start):
+                        filrered_locals[name] = value
+                        code_block_parts.add(name)
+                
+                block_stack[frame_id][offset][1].update(filrered_locals)
+            
             if trigger_data := _triggers.get(line_number):
                 code_block, offset = trigger_data
-                
-                frame_id = id(frame)
-                
+
                 new_entry = (line_number, dict(frame.f_locals))
                 
                 _block_stack = block_stack.setdefault(frame_id, [])
@@ -43,10 +66,20 @@ def trace_function(frame, event, arg):
                 else:
                     _block_stack[offset] = new_entry
                     del _block_stack[offset + 1:]
-                
-                for_slice_slot = for_slices[frame_id]
-                
-                for_slice_slot[line_number] = for_slice_slot.get(line_number, -1) + 1
+                    
+                match code_block:
+                    case 'For':
+                        for_slice_slot = for_slices[frame_id]
+                        
+                        slice_index = for_slice_slot.get(line_number, -1) + 1
+                        
+                        for_slice_slot[line_number] = slice_index
+                        
+                        if not slice_index: # slice_index == 0
+                            block_code_var_promisses[frame_id] = line_number, offset
+                    
+                    case 'With':
+                        block_code_var_promisses[frame_id] = line_number, offset
             
             if (
                 line_number == _dump_line
@@ -89,7 +122,7 @@ def trace_function(frame, event, arg):
                         call_stack,
                         _for_slices,
                         raise_exceptions,
-                        _file
+                        code_block_parts
                     ), file)
                 
                 _exit(0)
@@ -121,11 +154,11 @@ def trace_function(frame, event, arg):
             _block_stack.append((line_number, dict(frame.f_locals)))
             
             if __debug__:
-                print(f"{exc_type.__name__}" + f": {exc_value}" if str(exc_value) else "")
+                print(f"{exc_type.__name__}" + (f": {exc_value}" if str(exc_value) else ""))
 
 
 def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path) -> None:
-    global _triggers, _dump_line, _dump_occurrence, _snapshot, _file, _generators, TRACING_OVERHEAD
+    global _triggers, _dump_line, _dump_occurrence, _snapshot, _generators, TRACING_OVERHEAD
     
     try:
         source_code = file.read_text()
@@ -137,11 +170,15 @@ def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path) -> No
 
     _triggers, _generators = parse_triggers(source_code)
     
-    _dump_line, _dump_occurrence, _snapshot, _file = dump_line, dump_occurrence, snapshot, file
+    _dump_line, _dump_occurrence, _snapshot = dump_line, dump_occurrence, snapshot
     
-    tracer = yield_overhead_then_trace(file, source_code, trace_function)
-    TRACING_OVERHEAD = next(tracer)
-    next(tracer)
+    tree = code_to_tree(source_code)
+    tree = apply_pre_dump_patches(tree)
+
+    with use_path(str(file.parent)):
+        tracer = yield_overhead_then_trace(file, tree, trace_function)
+        TRACING_OVERHEAD = next(tracer)
+        next(tracer, None)
     
     print("\033[31m" + 'NERVER DUMPED' + "\033[0m")
     exit(1)
@@ -155,9 +192,9 @@ if __name__ == "__main__":
     arg_parser.add_argument("dump_occurrence", type=int, nargs="?", default=1)
     arg_parser.add_argument(
         "snapshot_path",
-        type=lambda path: Path(__file__).resolve().parent / path,
+        type=lambda path: Path(path).resolve(),
         nargs="?",
-        default='snapshot'
+        default=Path(__file__).parent / 'snapshot'
     )
     
     args = list(vars(arg_parser.parse_args()).values())

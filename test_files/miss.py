@@ -16,11 +16,15 @@ def hpfq():
         log.append(("hpfq2", i))
         yield i
 
+from pathlib import Path
+
+script_dir = Path(__file__).parent
+
 def ss():
     for i in range(1, 6):
         log.append(("ss", i))
         def h2pfq():
-            with open('s', 'w'):
+            with open(script_dir / 's', 'w'):
                 for i in range(1, 6):
                     log.append(("h2pfq", i))
                     yield from hpfq()
@@ -33,10 +37,9 @@ for i in ss():
 
 if __name__ == "__main__":
     import dill
-    from pathlib import Path
 
     if __debug__:
-        with open(Path(__file__).parent / 'miss', 'rb') as file:
+        with open(script_dir / 'miss', 'rb') as file:
             _out, _log = dill.load(file)
             
         bad_values = 0
@@ -49,7 +52,7 @@ if __name__ == "__main__":
         if _log == log and _out == out:
             print("\033[32m" + "HAROSHAYA RABOTA OLEG!")
     else:
-        with open(Path(__file__).parent / 'miss', 'wb') as file:
+        with open(script_dir / 'miss', 'wb') as file:
             dill.dump((out, log), file)
         
         print('\033[32m' + 'Saved.')

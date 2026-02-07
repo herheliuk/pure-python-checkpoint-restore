@@ -6,10 +6,10 @@ from dill import (
     load as dill_load
 )
 
-from utils.tracing import yield_overhead_then_trace
+from utils.tracing import use_path, yield_overhead_then_trace
 from utils.ast_patches import (
-    parse_tree,
-    apply_patches
+    code_to_tree,
+    apply_restore_patches
 )
 
 
@@ -33,42 +33,41 @@ def trace_function(frame, event, arg):
                 return trace_function
 
 
-def main(snapshot: Path, file: Path):
+def main(file: Path, snapshot: Path):
     global call_stack
     
-    with open(snapshot, 'rb') as open_file:
-        call_stack, for_slices, exceptions, saved_file = dill_load(open_file)
-    
-    file = file or saved_file
-    
-    try:
-        source_code = file.read_text()
-    except UnicodeDecodeError:
-        raise RuntimeError('invalid file') from None
-    
-    tree = parse_tree(source_code)
-    tree = apply_patches(tree, for_slices, exceptions)
-    
-    tracer = yield_overhead_then_trace(file, tree, trace_function)
-    TRACING_OVERHEAD = next(tracer)
-    next(tracer)
+    with use_path(str(file.parent)): # because dill_load reapplies imports & fds.
+        with open(snapshot, 'rb') as open_file:
+            call_stack, for_slices, exceptions, code_block_parts = dill_load(open_file)
+
+        try:
+            source_code = file.read_text()
+        except UnicodeDecodeError:
+            raise RuntimeError('invalid file') from None
+
+        tree = code_to_tree(source_code)
+        tree = apply_restore_patches(tree, for_slices, exceptions, code_block_parts)
+
+        tracer = yield_overhead_then_trace(file, tree, trace_function)
+        TRACING_OVERHEAD = next(tracer)
+        next(tracer, None)
 
 
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
+
+    arg_parser.add_argument(
+        "script_path",
+        type=lambda path: Path(path).resolve()
+    )
     
     arg_parser.add_argument(
         "snapshot_path",
-        type=lambda path: Path(__file__).resolve().parent / path,
-        nargs="?",
-        default=Path('snapshot').resolve()
-    )
-    arg_parser.add_argument(
-        "script_path",
         type=lambda path: Path(path).resolve(),
-        nargs="?"
+        nargs="?",
+        default=Path(__file__).resolve().parent / 'snapshot'
     )
-    
+
     args = list(vars(arg_parser.parse_args()).values())
 
     main(*args)

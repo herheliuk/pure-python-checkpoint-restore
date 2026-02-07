@@ -1,11 +1,34 @@
 #!/usr/bin/env python3
 
 from ast import AST
+from contextlib import contextmanager
 from pathlib import Path
-from sys import _getframe
+from sys import (
+    path as sys_path,
+    gettrace,
+    settrace,
+    _getframe
+)
 
 from utils.ast_functions import find_imports
-from utils.context_managers import use_dir, use_trace
+
+@contextmanager
+def use_path(target_dir: str):
+    original_dir = sys_path[0]
+    sys_path[0] = target_dir
+    try:
+        yield
+    finally:
+        sys_path[0] = original_dir
+
+@contextmanager
+def use_trace(trace_function):
+    old_trace = gettrace()
+    settrace(trace_function)
+    try:
+        yield
+    finally:
+        settrace(old_trace)
 
 def yield_overhead_then_trace(file: Path, source: str | AST, trace_function: function):
     paths_to_trace = { str(path) for path in find_imports(file) }
@@ -26,7 +49,7 @@ def yield_overhead_then_trace(file: Path, source: str | AST, trace_function: fun
         if frame.f_code.co_filename in paths_to_trace:
             return trace_function(frame, event, arg)
     
-    with use_dir(file.parent), use_trace(inner_trace_function):
+    with use_trace(inner_trace_function):
         try:
             frame, overhead = _getframe(), 0
             while frame:

@@ -2,7 +2,7 @@ from types import FrameType
 from typing import Iterator
 
 def walk_frames_to_current(frame: FrameType) -> Iterator[FrameType]:
-    """slower"""
+    """slower, more memory"""
     stack: list[FrameType] = []
     stack_append = stack.append
     
@@ -13,7 +13,6 @@ def walk_frames_to_current(frame: FrameType) -> Iterator[FrameType]:
     yield from reversed(stack)
 
 def walk_frames_to_root(frame: FrameType) -> Iterator[FrameType]:
-    """faster"""
     while frame:
         yield frame
         frame = frame.f_back
