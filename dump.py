@@ -83,6 +83,13 @@ def trace_function(frame, event, arg):
             ):
                 if __debug__:
                     print(f"{f'  DUMPING at line {line_number} ':-^50}")
+                    
+                final_generators = {}
+                
+                for line, gen_id in generators.items():
+                    block_calls = block_stack.get(gen_id, [])
+                    block_calls.reverse()
+                    final_generators[line] = block_calls
 
                 call_stack = []
                 
@@ -118,7 +125,8 @@ def trace_function(frame, event, arg):
                         _for_slices,
                         raise_exceptions,
                         code_block_parts,
-                        _optimisation_level
+                        _optimisation_level,
+                        final_generators
                     ), file)
                 
                 if __debug__:

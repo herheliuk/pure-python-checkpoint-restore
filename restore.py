@@ -12,12 +12,20 @@ from utils.ast_patches import (
     apply_restore_patches
 )
 
+gen_stack = []
 
 def trace_function(frame, event, arg):
-    if call_stack:
+    global gen_stack
+    stack = gen_stack or call_stack
+    
+    if stack:
         match event:
-            case 'line': 
-                next_line, required_locals = call_stack.pop()
+            case 'line':
+                if frame.f_lineno in _final_generators:
+                    print("SWITCH TO GEN STACK")
+                    stack = gen_stack = _final_generators[frame.f_lineno]
+                
+                next_line, required_locals = stack.pop()
                 
                 if __debug__:
                     print(f'{frame.f_lineno}..{next_line}')
@@ -35,19 +43,19 @@ def trace_function(frame, event, arg):
 
 
 def main(file: Path, snapshot: Path):
-    global call_stack
+    global call_stack, _final_generators
     
     with use_path(str(file.parent)): # because dill_load reapplies imports & fds.
         with open(snapshot, 'rb') as open_file:
-            call_stack, for_slices, exceptions, code_block_parts, optimisation_level = dill_load(open_file)
-
+            call_stack, for_slices, exceptions, code_block_parts, optimisation_level, final_generators = dill_load(open_file)
+            _final_generators = final_generators
         try:
             source_code = file.read_text()
         except UnicodeDecodeError, FileNotFoundError:
             raise RuntimeError('invalid file') from None
 
         tree = code_to_tree(source_code)
-        tree = apply_restore_patches(tree, for_slices, exceptions, code_block_parts)
+        tree = apply_restore_patches(tree, for_slices, exceptions, code_block_parts, final_generators)
 
         tracer = yield_overhead_then_trace(file, tree, trace_function, optimisation_level)
         TRACING_OVERHEAD = next(tracer)

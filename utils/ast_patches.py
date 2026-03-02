@@ -56,10 +56,11 @@ def apply_pre_dump_patches(tree: ast.AST) -> ast.AST:
 
 
 class TransformAST(ast.NodeTransformer):
-    def __init__(self, for_slices, raise_exceptions, code_block_parts):
+    def __init__(self, for_slices, raise_exceptions, code_block_parts, final_generators):
         self.for_slices = for_slices
         self.raise_exceptions = raise_exceptions
         self.code_block_parts = code_block_parts
+        self.final_generators = final_generators
 
     def maybe_raise(self, node):
         if (
@@ -82,6 +83,9 @@ class TransformAST(ast.NodeTransformer):
             node.iter = ast.Name(id=_id, ctx=ast.Load())
 
         if _slice := self.for_slices.get(node.lineno):
+            
+            if node.lineno in self.final_generators:
+                return node
             
             node.iter = ast.Subscript(
                 value=node.iter,
@@ -120,10 +124,11 @@ def apply_restore_patches(
         tree: ast.AST,
         for_slices: dict[int, int],
         raise_exceptions: dict[int, Exception],
-        code_block_parts: set[str]
+        code_block_parts: set[str],
+        final_generators: dict[int, int | dict]
     ) -> ast.AST:
      
-    tree = TransformAST(for_slices, raise_exceptions, code_block_parts).visit(tree)
+    tree = TransformAST(for_slices, raise_exceptions, code_block_parts, final_generators).visit(tree)
     ast.fix_missing_locations(tree)
     
     return tree
