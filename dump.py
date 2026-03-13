@@ -7,6 +7,7 @@ from dill import (
     register as dill_register
 )
 from types import GeneratorType
+
 from utils.ast_find import parse_triggers
 from utils.frame_stack import walk_frames_to_root
 from utils.tracing import use_path, yield_overhead_then_trace
@@ -137,7 +138,8 @@ def trace_function(frame, event, arg):
                         raise_exceptions,
                         code_block_parts,
                         _optimisation_level,
-                        final_generators
+                        final_generators,
+                        _args
                     ), file)
                 
                 if __debug__:
@@ -174,8 +176,8 @@ def trace_function(frame, event, arg):
                 print(exc_type.__name__ + (f": {str_exc_value}" if str_exc_value else ""))
 
 
-def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path, optimisation_level: int) -> None:
-    global _triggers, _dump_line, _dump_occurrence, _snapshot, _generators, TRACING_OVERHEAD, _optimisation_level
+def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path, optimisation_level: int, script_args: list[str] = None) -> None:
+    global _triggers, _dump_line, _dump_occurrence, _snapshot, _generators, TRACING_OVERHEAD, _optimisation_level, _args
     
     try:
         source_code = file.read_text()
@@ -193,13 +195,13 @@ def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path, optim
 
     _triggers, _generators = parse_triggers(source_code)
     
-    _dump_line, _dump_occurrence, _snapshot, _optimisation_level = dump_line, dump_occurrence, snapshot, optimisation_level
+    _dump_line, _dump_occurrence, _snapshot, _optimisation_level, _args = dump_line, dump_occurrence, snapshot, optimisation_level, script_args
     
     tree = code_to_tree(source_code)
     tree = apply_pre_dump_patches(tree)
 
     with use_path(str(file.parent)):
-        tracer = yield_overhead_then_trace(file, tree, trace_function, optimisation_level)
+        tracer = yield_overhead_then_trace(file, tree, trace_function, optimisation_level, script_args)
         TRACING_OVERHEAD = next(tracer)
         next(tracer, None)
     
@@ -208,7 +210,7 @@ def main(file: Path, dump_line: int, dump_occurrence: int, snapshot: Path, optim
 
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser
+    from argparse import ArgumentParser, REMAINDER
     
     arg_parser = ArgumentParser()
     
@@ -230,6 +232,13 @@ if __name__ == "__main__":
         help="Disable debug and enable optimisation with -O or -OO"
     )
     
+    arg_parser.add_argument(
+        "--args",
+        nargs="*",
+        default=[],
+        help="Arguments passed to the target script"
+    )
+    
     args = arg_parser.parse_args()
     
     main(
@@ -237,5 +246,6 @@ if __name__ == "__main__":
         args.dump_line,
         args.dump_occurrence,
         args.snapshot_path,
-        args.optimisation_level
+        args.optimisation_level,
+        args.args
     )

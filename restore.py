@@ -48,7 +48,7 @@ def main(file: Path, snapshot: Path):
     
     with use_path(str(file.parent)): # dill_load reapplies imports & fds.
         with open(snapshot, 'rb') as open_file:
-            call_stack, for_slices, exceptions, code_block_parts, optimisation_level, final_generators = dill_load(open_file)
+            call_stack, for_slices, exceptions, code_block_parts, optimisation_level, final_generators, script_args = dill_load(open_file)
             _final_generators = final_generators
             if __debug__:
                 print(f"_final_generators = {list(_final_generators.keys())}")
@@ -60,7 +60,7 @@ def main(file: Path, snapshot: Path):
         tree = code_to_tree(source_code)
         tree = apply_restore_patches(tree, for_slices, exceptions, code_block_parts, final_generators)
 
-        tracer = yield_overhead_then_trace(file, tree, trace_function, optimisation_level)
+        tracer = yield_overhead_then_trace(file, tree, trace_function, optimisation_level, script_args)
         TRACING_OVERHEAD = next(tracer)
         next(tracer, None)
 

@@ -1,6 +1,6 @@
 ### Usage:
 
-python3 dump.py `<script_path>` `<dump_line>` `[dump_occurrence]` `[snapshot_path]` `{optimiation_level}`
+python3 dump.py `<script_path>` `<dump_line>` `[dump_occurrence]` `[snapshot_path]` `{optimiation_level}` `--args {script_args}`
 
 python3 restore.py `<script_path>` `[snapshot_path]`
 
@@ -34,9 +34,8 @@ Extract all useful data from these frames and rebuild the state in a new program
 
 #### known BUGS:
 
-- test_files/miss.py memory test fails. (just unordered dicts?)
+- test_files/miss.py memory test fails. (lists are unordered?!)
 - dumpimg imp.py:95 - class triggers _enter_!?
-- args for the file we're tracing
 
 #### potential issues:
 
