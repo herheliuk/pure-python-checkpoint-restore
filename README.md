@@ -34,7 +34,6 @@ Extract all useful data from these frames and rebuild the state in a new program
 
 #### known BUGS:
 
-- test_files/miss.py memory test fails. (lists are unordered?!)
 - dumpimg imp.py:95 - class triggers _enter_!?
 
 #### potential issues:
@@ -58,3 +57,7 @@ from 'for' block:
 #### OPTIMISATIONS:
 
 - use AST to determine which locals we need to dump &? -> SQL
+
+#### Bugs that disappeared overtime?!
+
+- test_files/miss.py memory test (-O with python3, dump&restore with dump.py 🔥 > 0)
