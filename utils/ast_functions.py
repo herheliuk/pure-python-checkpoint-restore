@@ -10,7 +10,7 @@ def find_imports(script_path: Path) -> set[Path]:
     except UnicodeDecodeError, FileNotFoundError:
         raise RuntimeError('invalid file')
     ast_tree = parse(source_code, filename=script_path.name)
-    script_paths = {}
+    script_paths = set()
 
     for node in walk(ast_tree):
         if isinstance(node, (Import, ImportFrom)):
