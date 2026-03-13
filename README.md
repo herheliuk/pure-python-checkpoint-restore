@@ -30,7 +30,7 @@ Extract all useful data from these frames and rebuild the state in a new program
 
 ### WIP:
 
-- memory test
+- known BUGS
 
 #### known BUGS:
 

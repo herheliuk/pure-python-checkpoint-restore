@@ -85,7 +85,6 @@ def analyze(lines: list[str], mode: Mode) -> Stats:
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("file", type=Path)
-    p.add_argument("dump_no", type=int)
     p.add_argument("--mode", choices=[m.value for m in Mode], default="words")
     args = p.parse_args()
 
