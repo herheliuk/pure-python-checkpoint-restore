@@ -34,7 +34,7 @@ Extract all useful data from these frames and rebuild the state in a new program
 
 #### known BUGS:
 
-- dumpimg imp.py:95 - class triggers _enter_!?
+- dumpimg imp.py:95 - class triggers _enter_!? (remove __enter__ from all clases if it was ran already)
 
 #### potential issues:
 
